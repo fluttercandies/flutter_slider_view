@@ -1,0 +1,19 @@
+name: slider_view
+description: A slider view widget that supports custom type models and various configs.
+version: 1.0.0
+homepage: https://github.com/fluttercandies/flutter_slider_view
+
+environment:
+  sdk: ">=2.12.0 <3.0.0"
+  flutter: ">=2.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  equatable: ^2.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
