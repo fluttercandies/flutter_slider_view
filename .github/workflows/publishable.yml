@@ -1,4 +1,4 @@
-name: Publishable
+name: Publishable (stable)
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  dry_run:
+  publishable:
     name: Dry run publish on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -22,3 +22,4 @@ jobs:
           credentialJson: ${{ secrets.CREDENTIAL_JSON }}
           flutter: true
           dryRunOnly: true
+          skipTests: true
