@@ -6,7 +6,9 @@ that can be found in the LICENSE file. -->
 
 ## 1.0.1
 
-Support setting viewportFraction.
+### New features
+
+- Support setting viewportFraction.
 
 ## 1.0.0
 
