@@ -4,6 +4,10 @@ that can be found in the LICENSE file. -->
 
 # CHANGELOG
 
+## 1.0.1
+
+Support setting viewportFraction.
+
 ## 1.0.0
 
 Initial release.
