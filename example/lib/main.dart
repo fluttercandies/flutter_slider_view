@@ -53,14 +53,20 @@ class _DemoPageState extends State<DemoPage> {
               config: SliderViewConfig<String>(
                 aspectRatio: 16 / 9,
                 models: characters,
-                itemBuilder: (String e) => Center(
-                  child: Text(e, style: Theme.of(context).textTheme.headline3),
+                viewportFraction: 0.9, // Set to 1.0 to occupy the full viewport
+                itemBuilder: (String e) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  color: Theme.of(context).primaryColor,
+                  child: Center(
+                    child: Text(e,
+                        style: Theme.of(context).textTheme.headlineLarge),
+                  ),
                 ),
               ),
             ),
             Text(
               '$_counter',
-              style: Theme.of(context).textTheme.headline4,
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
           ],
         ),
