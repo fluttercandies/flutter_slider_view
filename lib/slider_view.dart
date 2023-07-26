@@ -24,6 +24,7 @@ class SliderViewConfig<T> extends Equatable {
     this.aspectRatio,
     this.width,
     this.height,
+    this.viewportFraction = 1.0,
     this.autoScroll = true,
     this.autoScrollOnPointerDown = false,
     this.scrollCurve = Curves.easeInOutQuart,
@@ -70,6 +71,14 @@ class SliderViewConfig<T> extends Equatable {
   ///
   /// Must be set along with [width].
   final double? height;
+
+  /// The fraction of the viewport that each page should occupy.
+  ///
+  /// Defaults to 1.0, which means each page fills the viewport in the
+  /// scrolling direction.
+  ///
+  /// Will only be assigned once when the widget is initialized.
+  final double viewportFraction;
 
   /// Whether items are allow to scroll automatically.
   ///
@@ -152,6 +161,7 @@ class SliderViewConfig<T> extends Equatable {
       aspectRatio,
       width,
       height,
+      viewportFraction,
       autoScroll,
       autoScrollOnPointerDown,
       scrollCurve,
@@ -208,6 +218,7 @@ class SlideViewState<T> extends State<SliderView<T>>
     initialPage: _hasOnlyOneModel
         ? 0
         : SliderView.infiniteIndexBase * config.models.length,
+    viewportFraction: config.viewportFraction,
   )..addListener(_pageListener);
 
   late RouteObserver? _routeObserver = config.routeObserver;
