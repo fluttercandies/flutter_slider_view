@@ -1,0 +1,33 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "AlexV525",
+      "name": "Alex Li",
+      "avatar_url": "https://avatars.githubusercontent.com/u/15884415?v=4",
+      "profile": "https://blog.alexv525.com",
+      "contributions": [
+        "code",
+        "design",
+        "doc",
+        "example",
+        "ideas",
+        "maintenance",
+        "question",
+        "review"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "projectName": "flutter_slider_view",
+  "projectOwner": "fluttercandies"
+}
