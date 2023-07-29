@@ -189,39 +189,39 @@ class SliderView<T> extends StatefulWidget {
   /// The configuration of the widget.
   final SliderViewConfig<T> config;
 
-  /// A basic multiplier for infinity scrolls.
-  ///
-  /// Assuming that you need to achieve infinite scrolling, you only need to set
-  /// a very large value at initialization, and take the remainder when
-  /// calculating, so that [PageView.builder] always builds content based on the
-  /// remainder, and can scroll forward at any time.
-  static int infiniteIndexBase = 50000;
-
   @override
   SlideViewState<T> createState() => SlideViewState<T>();
 }
+
+const int _kFillerPageNum = 2;
 
 class SlideViewState<T> extends State<SliderView<T>>
     with WidgetsBindingObserver, RouteAware {
   SliderViewConfig<T> get config => widget.config;
 
   /// Current page's simplify notifier.
-  final ValueNotifier<double> _pageNotifier = ValueNotifier<double>(0);
+  ///
+  /// Start from the [_kFillerPageNum] if there are more than one model.
+  late final ValueNotifier<double> _pageNotifier =
+      ValueNotifier<double>(_hasOnlyOneModel ? 0 : _kFillerPageNum.toDouble());
 
-  /// If [SliderView.models] has only one element,
+  /// If [SliderViewConfig.models] has only one element,
   /// so the slider is not required to scroll.
   bool get _hasOnlyOneModel => config.models.length == 1;
 
   /// The controller used by the slider's [PageView].
   late final PageController _pageController = PageController(
-    // Start from the multiplied number if there are more than one model.
-    initialPage: _hasOnlyOneModel
-        ? 0
-        : SliderView.infiniteIndexBase * config.models.length,
+    // Start from the [kFillerPageNum] if there are more than one model.
+    initialPage: _hasOnlyOneModel ? 0 : _kFillerPageNum,
     viewportFraction: config.viewportFraction,
   )..addListener(_pageListener);
 
   late RouteObserver? _routeObserver = config.routeObserver;
+
+  /// Models involved in rendering.
+  late List<T> _models = _handleModels();
+
+  late List<int> _ignoreIndexes = _handleIgnoreIndexes();
 
   /// Scrolling timer.
   Timer? _timer;
@@ -263,10 +263,25 @@ class SlideViewState<T> extends State<SliderView<T>>
     super.didUpdateWidget(oldWidget);
     // Relayout if any arguments changed.
     if (oldWidget.config != widget.config) {
-      setState(() {
-        _body = _buildBody(context);
-      });
+      // Get before [setState].
+      final int oldWidgetModelsLength = _models.length;
+
+      _models = _handleModels();
+      _ignoreIndexes = _handleIgnoreIndexes();
+      _body = _buildBody(context);
+
+      setState(() {});
+
       _ambiguate(WidgetsBinding.instance)?.addPostFrameCallback((_) {
+        // Keep position when changing from one model to multiple models.
+        if (oldWidgetModelsLength == 1 && _models.length > 1) {
+          _pageController.jumpToPage(_kFillerPageNum);
+        } else if (oldWidgetModelsLength > _models.length) {
+          if (_pageNotifier.value > _models.length - 1 - _kFillerPageNum) {
+            _pageController.jumpToPage(_pageNotifier.value.toInt() - 1);
+          }
+        }
+
         startTimer();
       });
     }
@@ -302,11 +317,47 @@ class SlideViewState<T> extends State<SliderView<T>>
     super.dispose();
   }
 
+  /// Preprocessed [SliderViewConfig.models] to enable infinite scrolling.
+  ///
+  /// Shallow copy to use as a judgment when [didUpdateWidget].
+  List<T> _handleModels() {
+    final int length = config.models.length;
+    if (length == 1) {
+      return <T>[...config.models];
+    }
+
+    final List<T> leftFiller = config.models.sublist(length - _kFillerPageNum);
+    final Iterable<T> rightFiller = config.models.take(_kFillerPageNum);
+
+    return <T>[
+      ...leftFiller,
+      ...config.models,
+      ...rightFiller,
+    ];
+  }
+
+  List<int> _handleIgnoreIndexes() {
+    return [List.generate(_kFillerPageNum - 1, (index) => index)].fold([],
+        (prev, list) {
+      if (list.isEmpty) {
+        return [];
+      }
+
+      final List<int> other = [];
+
+      for (int i = 0; i < list.length; i++) {
+        other.add(_models.length + i);
+      }
+
+      return [...list, ...other];
+    });
+  }
+
   void _pageListener() {
     if (_pageController.hasClients) {
       final double page = _pageController.page ?? 0;
       if (page != _pageNotifier.value) {
-        config.onPageChanged?.call(page);
+        config.onPageChanged?.call(math.max(0, page - _kFillerPageNum));
       }
       _pageNotifier.value = page;
     }
@@ -337,20 +388,17 @@ class SlideViewState<T> extends State<SliderView<T>>
     _timer = null;
   }
 
-  /// Calculate the interpolation of the page.
-  double _pageInterpolation(int index, double? page) {
-    final double result;
-    // Calculate the actually index in double.
-    final double newPage = (page ?? 0) % config.models.length;
-    // If the remainder is greater than the index of the last page but still
-    // between the last page and the first page, subtract it from the
-    // rounded-down difference and take the complement of 1.
-    if (newPage > config.models.length - 1 && index == 0) {
-      result = index - (newPage - newPage.floor() - 1);
+  /// Reset the page when the current position is on a filler page.
+  double _handlePage(double page) {
+    final int length = config.models.length;
+
+    if (page < _kFillerPageNum) {
+      return page - _kFillerPageNum + length;
+    } else if (page > _models.length - 1 - _kFillerPageNum) {
+      return page - _kFillerPageNum - length;
     } else {
-      result = index - newPage;
+      return page - _kFillerPageNum;
     }
-    return math.min(1, math.max(0, result.abs()));
   }
 
   Widget _buildBody(BuildContext context) {
@@ -381,15 +429,31 @@ class SlideViewState<T> extends State<SliderView<T>>
           PointerDeviceKind.trackpad,
         },
       ),
-      physics: _hasOnlyOneModel ? const NeverScrollableScrollPhysics() : null,
       controller: _pageController,
       itemBuilder: _buildItem,
-      // If it's more than one model, the [PageView] will benefit from the
-      // [IndexedWidgetBuilder] mechanism, which make it not necessary to set.
-      itemCount: _hasOnlyOneModel ? 1 : null,
-      onPageChanged: (int i) => config.onPageIndexChanged?.call(
-        i % config.models.length,
-      ),
+      itemCount: _models.length,
+      onPageChanged: (int i) async {
+        final int length = _models.length - _kFillerPageNum;
+
+        /// Ignore first and last filler pages.
+        if (_ignoreIndexes.contains(i)) {
+          return;
+        }
+
+        /// Manually jump to the actual first or last page when on the
+        /// filler page.
+        if (i == _kFillerPageNum - 1) {
+          await Future<void>.delayed(config.scrollDuration);
+          _pageController.jumpToPage(length - 1);
+          return;
+        } else if (i == length) {
+          await Future<void>.delayed(config.scrollDuration);
+          _pageController.jumpToPage(_kFillerPageNum);
+          return;
+        }
+
+        config.onPageIndexChanged?.call(math.max(0, i - _kFillerPageNum));
+      },
     );
     if (config.autoScrollOnPointerDown) {
       return body;
@@ -414,29 +478,35 @@ class SlideViewState<T> extends State<SliderView<T>>
 
   Widget _buildIndicators(BuildContext context) {
     final double size = config.indicatorSize;
-    return Positioned.fill(
-      top: null,
-      bottom: config.indicatorOffsetFromBottom ?? size / 1.5,
-      child: Container(
-        alignment: Alignment.center,
-        height: size,
-        child: ListView.separated(
-          scrollDirection: config.scrollDirection,
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          separatorBuilder: (_, __) => SizedBox(width: size),
-          itemCount: config.models.length,
-          itemBuilder: _buildIndicatorItem,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildIndicatorItem(BuildContext context, int index) {
     return ValueListenableBuilder<double>(
       valueListenable: _pageNotifier,
       builder: (BuildContext context, double page, __) {
-        final double interpolation = _pageInterpolation(index, page);
+        final double result = _handlePage(page);
+        return Positioned.fill(
+          top: null,
+          bottom: config.indicatorOffsetFromBottom ?? size / 1.5,
+          child: Container(
+            alignment: Alignment.center,
+            height: size,
+            child: ListView.separated(
+              scrollDirection: config.scrollDirection,
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              separatorBuilder: (_, __) => SizedBox(width: size),
+              itemCount: config.models.length,
+              itemBuilder: (_, int index) => _buildIndicatorItem(index, result),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildIndicatorItem(int index, double page) {
+    return Builder(
+      builder: (BuildContext context) {
+        // Calculate the interpolation of the page.
+        final double interpolation = math.min(1, (index - page).abs());
         if (config.indicatorBuilder != null) {
           return config.indicatorBuilder!(context, interpolation);
         }
@@ -458,8 +528,8 @@ class SlideViewState<T> extends State<SliderView<T>>
   }
 
   Widget _buildItem(BuildContext context, int index) {
-    final int newIndex = index % config.models.length;
-    final T model = config.models[newIndex];
+    final int newIndex = index % (config.models.length);
+    final T model = _models[newIndex];
     Widget item = GestureDetector(
       onTap: () => config.onItemTap?.call(newIndex, model),
       child: config.itemBuilder(model),
