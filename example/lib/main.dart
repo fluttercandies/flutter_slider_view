@@ -32,12 +32,23 @@ class DemoPage extends StatefulWidget {
 
 class _DemoPageState extends State<DemoPage> {
   late List<String> characters = <String>[String.fromCharCode(_counter)];
-  int _counter = 64;
+  int _counter = 65;
 
   void _incrementCounter() {
     setState(() {
       ++_counter;
       characters.add(String.fromCharCode(_counter));
+    });
+  }
+
+  void _removeCharacter() {
+    if (_counter == 65) {
+      return;
+    }
+
+    setState(() {
+      --_counter;
+      characters.removeLast();
     });
   }
 
@@ -68,13 +79,33 @@ class _DemoPageState extends State<DemoPage> {
               '$_counter',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 20,
+              runSpacing: 10,
+              children: [
+                ElevatedButton(
+                  onPressed: _incrementCounter,
+                  child: Text(
+                    'Increment Counter',
+                    style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                          color: Colors.white,
+                        ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _removeCharacter,
+                  child: Text(
+                    'Remove Character',
+                    style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                          color: Colors.white,
+                        ),
+                  ),
+                ),
+              ],
+            )
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }
