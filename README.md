@@ -1,4 +1,7 @@
 # Slider View
+<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 [![pub package](https://img.shields.io/pub/v/slider_view?label=stable)][pub package]
 [![GitHub](https://img.shields.io/github/license/fluttercandies/flutter_slider_view)][repo]
@@ -44,6 +47,21 @@ See `SliderViewConfig` for more details.
 ## Contributors ✨
 
 Many thanks to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/moxiaov587"><img src="https://avatars.githubusercontent.com/u/46736634?v=4?s=100" width="100px;" alt="moxiaov587"/><br /><sub><b>moxiaov587</b></sub></a><br /><a href="https://github.com/fluttercandies/flutter_slider_view/commits?author=moxiaov587" title="Code">💻</a> <a href="#example-moxiaov587" title="Examples">💡</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
