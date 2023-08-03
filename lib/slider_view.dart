@@ -221,7 +221,7 @@ class SlideViewState<T> extends State<SliderView<T>>
   /// Models involved in rendering.
   late List<T> _models = _handleModels();
 
-  late List<int> _ignoreIndexes = _handleIgnoreIndexes();
+  int _lastReportedPage = 0;
 
   /// Scrolling timer.
   Timer? _timer;
@@ -240,6 +240,8 @@ class SlideViewState<T> extends State<SliderView<T>>
       ?..addObserver(this)
       // Start the slide after the first frame were built.
       ..addPostFrameCallback((_) => startTimer());
+
+    _lastReportedPage = _pageController.initialPage;
   }
 
   @override
@@ -266,11 +268,10 @@ class SlideViewState<T> extends State<SliderView<T>>
       // Get before [setState].
       final int oldWidgetModelsLength = _models.length;
 
-      _models = _handleModels();
-      _ignoreIndexes = _handleIgnoreIndexes();
-      _body = _buildBody(context);
-
-      setState(() {});
+      setState(() {
+        _models = _handleModels();
+        _body = _buildBody(context);
+      });
 
       _ambiguate(WidgetsBinding.instance)?.addPostFrameCallback((_) {
         // Keep position when changing from one model to multiple models.
@@ -336,28 +337,11 @@ class SlideViewState<T> extends State<SliderView<T>>
     ];
   }
 
-  List<int> _handleIgnoreIndexes() {
-    return [List.generate(_kFillerPageNum - 1, (index) => index)].fold([],
-        (prev, list) {
-      if (list.isEmpty) {
-        return [];
-      }
-
-      final List<int> other = [];
-
-      for (int i = 0; i < list.length; i++) {
-        other.add(_models.length + i);
-      }
-
-      return [...list, ...other];
-    });
-  }
-
   void _pageListener() {
     if (_pageController.hasClients) {
       final double page = _pageController.page ?? 0;
       if (page != _pageNotifier.value) {
-        config.onPageChanged?.call(math.max(0, page - _kFillerPageNum));
+        config.onPageChanged?.call(page - _kFillerPageNum);
       }
       _pageNotifier.value = page;
     }
@@ -419,41 +403,58 @@ class SlideViewState<T> extends State<SliderView<T>>
   }
 
   Widget _buildSlideBody(BuildContext context) {
-    final Widget body = PageView.builder(
-      scrollBehavior: ScrollConfiguration.of(context).copyWith(
-        scrollbars: false,
-        // Capable with desktops.
-        dragDevices: <PointerDeviceKind>{
-          PointerDeviceKind.touch,
-          PointerDeviceKind.mouse,
-          PointerDeviceKind.trackpad,
+    final Widget body = NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification notification) {
+        if (notification.depth == 0 && notification is ScrollEndNotification) {
+          /// Jump to the first or last page when the slide ends and goes out
+          /// of bounds.
+          final int currentPage =
+              (notification.metrics as PageMetrics).page!.round();
+
+          if (currentPage != _lastReportedPage) {
+            _lastReportedPage = currentPage;
+
+            /// Actual length.
+            final int length = _models.length - _kFillerPageNum;
+
+            /// Manually jump to the actual first or last page when on the
+            /// filler page.
+            if (currentPage == _kFillerPageNum - 1) {
+              _pageController.jumpToPage(length - 1);
+              return false;
+            } else if (currentPage == length) {
+              _pageController.jumpToPage(_kFillerPageNum);
+              return false;
+            }
+          }
+        }
+
+        return false;
+      },
+      child: PageView.builder(
+        scrollBehavior: ScrollConfiguration.of(context).copyWith(
+          scrollbars: false,
+          // Capable with desktops.
+          dragDevices: <PointerDeviceKind>{
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.trackpad,
+          },
+        ),
+        controller: _pageController,
+        itemBuilder: _buildItem,
+        itemCount: _models.length,
+        onPageChanged: (int i) {
+          final int index = i - _kFillerPageNum;
+
+          if ([-1, widget.config.models.length].contains(index)) {
+            // Ignore overflow indexes.
+            return;
+          }
+
+          config.onPageIndexChanged?.call(index);
         },
       ),
-      controller: _pageController,
-      itemBuilder: _buildItem,
-      itemCount: _models.length,
-      onPageChanged: (int i) async {
-        final int length = _models.length - _kFillerPageNum;
-
-        /// Ignore first and last filler pages.
-        if (_ignoreIndexes.contains(i)) {
-          return;
-        }
-
-        /// Manually jump to the actual first or last page when on the
-        /// filler page.
-        if (i == _kFillerPageNum - 1) {
-          await Future<void>.delayed(config.scrollDuration);
-          _pageController.jumpToPage(length - 1);
-          return;
-        } else if (i == length) {
-          await Future<void>.delayed(config.scrollDuration);
-          _pageController.jumpToPage(_kFillerPageNum);
-          return;
-        }
-
-        config.onPageIndexChanged?.call(math.max(0, i - _kFillerPageNum));
-      },
     );
     if (config.autoScrollOnPointerDown) {
       return body;
