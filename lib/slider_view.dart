@@ -41,9 +41,14 @@ class SliderViewConfig<T> extends Equatable {
     this.onPageChanged,
     this.onPageIndexChanged,
     this.routeObserver,
-  }) : assert(
+  })  : assert(
           (width != null && height != null) || aspectRatio != null,
           'At least one set of size constraints need to be set.',
+        ),
+        assert(
+          scrollInterval - scrollDuration >= const Duration(milliseconds: 100),
+          'The scrollInterval($scrollInterval) needs to be at least 100ms more '
+          'than the scrollDuration($scrollDuration).',
         );
 
   /// Any type of models.
@@ -222,6 +227,8 @@ class SlideViewState<T> extends State<SliderView<T>>
   late List<T> _models = _handleModels();
 
   int _lastReportedPage = 0;
+
+  int? _lastCallbackIndex;
 
   /// Scrolling timer.
   Timer? _timer;
@@ -419,10 +426,10 @@ class SlideViewState<T> extends State<SliderView<T>>
 
             /// Manually jump to the actual first or last page when on the
             /// filler page.
-            if (currentPage == _kFillerPageNum - 1) {
+            if (currentPage <= _kFillerPageNum - 1) {
               _pageController.jumpToPage(length - 1);
               return false;
-            } else if (currentPage == length) {
+            } else if (currentPage >= length) {
               _pageController.jumpToPage(_kFillerPageNum);
               return false;
             }
@@ -445,13 +452,21 @@ class SlideViewState<T> extends State<SliderView<T>>
         itemBuilder: _buildItem,
         itemCount: _models.length,
         onPageChanged: (int i) {
-          final int index = i - _kFillerPageNum;
+          int index = i - _kFillerPageNum;
 
-          if ([-1, widget.config.models.length].contains(index)) {
-            // Ignore overflow indexes.
+          /// Fix index in filler pages.
+          if (index < 0) {
+            index = widget.config.models.length - 1;
+          } else if (index >= widget.config.models.length) {
+            index = 0;
+          }
+
+          /// Skip duplicates.
+          if (_lastCallbackIndex == index) {
             return;
           }
 
+          _lastCallbackIndex = index;
           config.onPageIndexChanged?.call(index);
         },
       ),
