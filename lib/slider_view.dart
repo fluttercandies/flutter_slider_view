@@ -228,7 +228,8 @@ class SlideViewState<T> extends State<SliderView<T>>
 
   int _lastReportedPage = 0;
 
-  int? _lastCallbackIndex;
+  /// Record last callback page index for de-duplication.
+  int? _lastCallbackPageIndex;
 
   /// Scrolling timer.
   Timer? _timer;
@@ -380,16 +381,26 @@ class SlideViewState<T> extends State<SliderView<T>>
   }
 
   /// Reset the page when the current position is on a filler page.
+  ///
+  /// The page needs to be adjusted by subtracting the added filler pages
+  /// on the left (i.e., [page] - [_kFillerPageNum]).
+  ///
+  /// When on a filler page on the left (i.e., [page] < [_kFillerPageNum]),
+  /// the page should be additionally adjusted to the right.
+  ///
+  /// When on a filler page on the right (i.e., [page] > [_models].length - 1 - [_kFillerPageNum]),
+  /// the page should be additionally adjusted to the left.
   double _handlePage(double page) {
     final int length = config.models.length;
 
+    double pageFix = page - _kFillerPageNum;
+
     if (page < _kFillerPageNum) {
-      return page - _kFillerPageNum + length;
+      pageFix += length;
     } else if (page > _models.length - 1 - _kFillerPageNum) {
-      return page - _kFillerPageNum - length;
-    } else {
-      return page - _kFillerPageNum;
+      pageFix -= length;
     }
+    return pageFix;
   }
 
   Widget _buildBody(BuildContext context) {
@@ -413,25 +424,23 @@ class SlideViewState<T> extends State<SliderView<T>>
     final Widget body = NotificationListener<ScrollNotification>(
       onNotification: (ScrollNotification notification) {
         if (notification.depth == 0 && notification is ScrollEndNotification) {
-          /// Jump to the first or last page when the slide ends and goes out
-          /// of bounds.
+          // Jump to the first or last page when the slide ends and goes out
+          // of bounds.
           final int currentPage =
               (notification.metrics as PageMetrics).page!.round();
 
           if (currentPage != _lastReportedPage) {
             _lastReportedPage = currentPage;
 
-            /// Actual length.
+            // Actual length.
             final int length = _models.length - _kFillerPageNum;
 
-            /// Manually jump to the actual first or last page when on the
-            /// filler page.
+            // Manually jump to the actual first or last page when on the
+            // filler page.
             if (currentPage <= _kFillerPageNum - 1) {
               _pageController.jumpToPage(length - 1);
-              return false;
             } else if (currentPage >= length) {
               _pageController.jumpToPage(_kFillerPageNum);
-              return false;
             }
           }
         }
@@ -454,19 +463,19 @@ class SlideViewState<T> extends State<SliderView<T>>
         onPageChanged: (int i) {
           int index = i - _kFillerPageNum;
 
-          /// Fix index in filler pages.
+          // Fix index in filler pages.
           if (index < 0) {
             index = widget.config.models.length - 1;
           } else if (index >= widget.config.models.length) {
             index = 0;
           }
 
-          /// Skip duplicates.
-          if (_lastCallbackIndex == index) {
+          // Skip duplicate index.
+          if (_lastCallbackPageIndex == index) {
             return;
           }
 
-          _lastCallbackIndex = index;
+          _lastCallbackPageIndex = index;
           config.onPageIndexChanged?.call(index);
         },
       ),
