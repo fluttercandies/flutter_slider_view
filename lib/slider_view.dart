@@ -148,6 +148,18 @@ class SliderViewConfig<T> extends Equatable {
   final void Function(int index, T model)? onItemTap;
 
   /// Callback when the [PageController.page] has changed.
+  ///
+  /// Note that the implementation of infinite scroll causes the [page]
+  /// transition to not follow the normal range from 0 to ([models].length - 1).
+  ///
+  /// When sliding from the first item to the last, the [page] transition
+  /// sequence is 0...-1, followed by a direct jump to ([models].length - 1).
+  ///
+  /// Conversely, when sliding from the last item back to the first, the [page]
+  /// transition sequence is from ([models].length - 1)...[models].length,
+  /// followed by a direct jump to 0.
+  ///
+  /// See [SlideViewState._onScrollNotification].
   final void Function(double page)? onPageChanged;
 
   /// Callback when the page in integer has changed.
@@ -380,6 +392,37 @@ class SlideViewState<T> extends State<SliderView<T>>
     _timer = null;
   }
 
+  /// The implementation of infinite scroll.
+  ///
+  /// Padding items are added at the beginning and end for infinite scrolling.
+  /// The correct item is then navigated to when a [ScrollEndNotification] is
+  /// received while at a padding item.
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (notification.depth == 0 && notification is ScrollEndNotification) {
+      // Jump to the first or last page when the slide ends and goes out
+      // of bounds.
+      final int currentPage =
+          (notification.metrics as PageMetrics).page!.round();
+
+      if (currentPage != _lastReportedPage) {
+        _lastReportedPage = currentPage;
+
+        // Actual length.
+        final int length = _models.length - _kFillerPageNum;
+
+        // Manually jump to the actual first or last page when on the
+        // filler page.
+        if (currentPage <= _kFillerPageNum - 1) {
+          _pageController.jumpToPage(length - 1);
+        } else if (currentPage >= length) {
+          _pageController.jumpToPage(_kFillerPageNum);
+        }
+      }
+    }
+
+    return false;
+  }
+
   /// Reset the page when the current position is on a filler page.
   ///
   /// The page needs to be adjusted by subtracting the added filler pages
@@ -422,31 +465,7 @@ class SlideViewState<T> extends State<SliderView<T>>
 
   Widget _buildSlideBody(BuildContext context) {
     final Widget body = NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification notification) {
-        if (notification.depth == 0 && notification is ScrollEndNotification) {
-          // Jump to the first or last page when the slide ends and goes out
-          // of bounds.
-          final int currentPage =
-              (notification.metrics as PageMetrics).page!.round();
-
-          if (currentPage != _lastReportedPage) {
-            _lastReportedPage = currentPage;
-
-            // Actual length.
-            final int length = _models.length - _kFillerPageNum;
-
-            // Manually jump to the actual first or last page when on the
-            // filler page.
-            if (currentPage <= _kFillerPageNum - 1) {
-              _pageController.jumpToPage(length - 1);
-            } else if (currentPage >= length) {
-              _pageController.jumpToPage(_kFillerPageNum);
-            }
-          }
-        }
-
-        return false;
-      },
+      onNotification: _onScrollNotification,
       child: PageView.builder(
         scrollBehavior: ScrollConfiguration.of(context).copyWith(
           scrollbars: false,
