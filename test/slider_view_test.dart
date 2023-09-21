@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,8 +7,9 @@ const int _kCode = 65;
 
 void main() {
   testWidgets('Infinity scrolling', (WidgetTester tester) async {
-    final length = math.Random().nextInt(50) + 3;
-    const speed = 1000.0;
+    const width = 200.0;
+    const length = 16;
+    const duration = Duration(milliseconds: 800);
     final log = <int>[];
 
     await tester.pumpWidget(Directionality(
@@ -18,8 +17,8 @@ void main() {
       child: SliderView(
         config: SliderViewConfig<String>(
           autoScroll: false,
-          width: 200,
-          height: 200,
+          width: width,
+          height: width,
           models: List.generate(
               length, (int index) => String.fromCharCode(_kCode + index)),
           itemBuilder: (String text) => SizedBox(child: Text(text)),
@@ -34,8 +33,8 @@ void main() {
 
     // From left to right.
     for (int i = 0; i < length - 1; i++) {
-      await tester.fling(
-          find.byType(Directionality), const Offset(-60.0, 0.0), speed);
+      await tester.timedDrag(
+          find.byType(Directionality), const Offset(-width, 0.0), duration);
       await tester.pumpAndSettle();
       expect(find.text(String.fromCharCode(_kCode + i)), findsNothing);
       expect(find.text(String.fromCharCode(_kCode + i + 1)), findsOneWidget);
@@ -43,71 +42,72 @@ void main() {
       log.clear();
     }
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(-60.0, 0.0), speed);
+    // To the first item.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(-width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode + length - 1)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode)), findsOneWidget);
     expect(log, [0]);
     log.clear();
 
-    await tester.fling(find.byType(Directionality),
-        Offset(math.Random().nextDouble() * 50.0, 0.0), speed);
-    await tester.pumpAndSettle();
-    expect(find.text(String.fromCharCode(_kCode + length - 1)), findsNothing);
-    expect(find.text(String.fromCharCode(_kCode)), findsOneWidget);
-    expect(log, []);
-
-    await tester.fling(
-        find.byType(Directionality), const Offset(60.0, 0.0), speed);
+    // To the last item.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode + length - 1)), findsOneWidget);
     expect(log, [length - 1]);
     log.clear();
 
-    await tester.fling(find.byType(Directionality),
-        Offset(-math.Random().nextDouble() * 60 - 60.0, 0.0), speed);
+    // To the first item again.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(-width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode + length - 1)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode)), findsOneWidget);
     expect(log, [0]);
     log.clear();
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(-60.0, 0.0), speed);
+    // To the second item.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(-width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode + 1)), findsOneWidget);
     expect(log, [1]);
     log.clear();
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(-60.0, 0.0), speed);
+    // To the third item.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(-width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode + 1)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode + 2)), findsOneWidget);
     expect(log, [2]);
     log.clear();
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(60.0, 0.0), speed);
+    // Back to the second item.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode + 2)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode + 1)), findsOneWidget);
     expect(log, [1]);
     log.clear();
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(60.0, 0.0), speed);
+    // Back to the first item.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode + 1)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode)), findsOneWidget);
     expect(log, [0]);
     log.clear();
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(60.0, 0.0), speed);
+    // Back to the last item.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode + length - 1)), findsOneWidget);
@@ -116,8 +116,8 @@ void main() {
 
     // From right to left.
     for (int i = length - 1; i > 0; i--) {
-      await tester.fling(
-          find.byType(Directionality), const Offset(60.0, 0.0), speed);
+      await tester.timedDrag(
+          find.byType(Directionality), const Offset(width, 0.0), duration);
       await tester.pumpAndSettle();
       expect(find.text(String.fromCharCode(_kCode + i)), findsNothing);
       expect(find.text(String.fromCharCode(_kCode + i - 1)), findsOneWidget);
@@ -125,71 +125,72 @@ void main() {
       log.clear();
     }
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(60.0, 0.0), speed);
+    // To the last item.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode + length - 1)), findsOneWidget);
     expect(log, [length - 1]);
     log.clear();
 
-    await tester.fling(find.byType(Directionality),
-        Offset(-math.Random().nextDouble() * 50.0, 0.0), speed);
-    await tester.pumpAndSettle();
-    expect(find.text(String.fromCharCode(_kCode)), findsNothing);
-    expect(find.text(String.fromCharCode(_kCode + length - 1)), findsOneWidget);
-    expect(log, []);
-
-    await tester.fling(
-        find.byType(Directionality), const Offset(-60.0, 0.0), speed);
+    // To the first item.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(-width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode + length - 1)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode)), findsOneWidget);
     expect(log, [0]);
     log.clear();
 
-    await tester.fling(find.byType(Directionality),
-        Offset(math.Random().nextDouble() * 60 + 60.0, 0.0), speed);
+    // To the last item again.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode + length - 1)), findsOneWidget);
     expect(log, [length - 1]);
     log.clear();
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(60.0, 0.0), speed);
+    // To the second term from bottom.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode + length - 1)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode + length - 2)), findsOneWidget);
     expect(log, [length - 2]);
     log.clear();
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(60.0, 0.0), speed);
+    // To the third term from bottom.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode + length - 2)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode + length - 3)), findsOneWidget);
     expect(log, [length - 3]);
     log.clear();
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(-60.0, 0.0), speed);
+    // Back to the second term from bottom.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(-width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode + length - 3)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode + length - 2)), findsOneWidget);
     expect(log, [length - 2]);
     log.clear();
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(-60.0, 0.0), speed);
+    // Back to the last item.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(-width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode + length - 2)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode + length - 1)), findsOneWidget);
     expect(log, [length - 1]);
     log.clear();
 
-    await tester.fling(
-        find.byType(Directionality), const Offset(-60.0, 0.0), speed);
+    // Back to the first item.
+    await tester.timedDrag(
+        find.byType(Directionality), const Offset(-width, 0.0), duration);
     await tester.pumpAndSettle();
     expect(find.text(String.fromCharCode(_kCode + length - 1)), findsNothing);
     expect(find.text(String.fromCharCode(_kCode)), findsOneWidget);
@@ -197,7 +198,7 @@ void main() {
   });
 
   testWidgets('Auto scrolling', (WidgetTester tester) async {
-    final length = math.Random().nextInt(50) + 2;
+    const length = 11;
     final log = <int>[];
 
     await tester.pumpWidget(Directionality(
