@@ -5,14 +5,19 @@ on:
     types: [ published ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26
+        with:
+          persist-credentials: false
       - name: Publish
-        uses: k-paxian/dart-package-publisher@master
+        uses: k-paxian/dart-package-publisher@8fdba1dbf624c712706281a6f91cb50b6bfc2eaf
         with:
           credentialJson: ${{ secrets.CREDENTIAL_JSON }}
           flutter: true
